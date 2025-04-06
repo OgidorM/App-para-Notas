@@ -1,8 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import 'note_detail.dart';
+import '../models/note.dart';
+import '../utils/databse_helper.dart';
+
 
 class NoteList extends StatefulWidget {
-  const NoteList({super.key});
+
+  int count = 0;
 
   @override
   State<StatefulWidget> createState() {
@@ -13,7 +19,16 @@ class NoteList extends StatefulWidget {
 
 class NoteListState extends State<NoteList> {
 
+  DatabaseHelper databaseHelper = DatabaseHelper();
+  List<Note> noteList = [];
   int count = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    databaseHelper = DatabaseHelper();
+    updateListView();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +44,7 @@ class NoteListState extends State<NoteList> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           debugPrint('FAB Clicked');
-          navigateToDetail('Adicionar Nota');
+          navigateToDetail(Note('', '', 2), 'Adicionar Nota');
         },
         tooltip: 'Adicionar Nota',
         backgroundColor: Colors.white,
@@ -54,17 +69,23 @@ class NoteListState extends State<NoteList> {
           elevation: 2.0,
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.yellow,
-              child: Icon(Icons.keyboard_arrow_right),
+              backgroundColor: getPriorityColor(noteList[position].priority),
+              child: getPriorityIcon(noteList[position].priority),
             ),
 
-            title: Text('Teste', style: titleStyle,),
-            subtitle: Text('Teste'),
-            trailing: Icon(Icons.delete, color: Colors.grey,),
+            title: Text(noteList[position].title, style: titleStyle,),
+            subtitle: Text(noteList[position].date),
+
+            trailing: GestureDetector(
+              child: Icon(Icons.delete, color: Colors.grey,),
+              onTap: () {
+                _delete(context, noteList[position]);
+              },
+            ),
 
             onTap: () {
               debugPrint('ListTile Tapped');
-              navigateToDetail('Editar Nota');
+              navigateToDetail(noteList[position], 'Editar Nota');
             },
           ),
         );
@@ -72,9 +93,75 @@ class NoteListState extends State<NoteList> {
     );
   }
 
-  void navigateToDetail(String title) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return NoteDetail(title);
+  Color getPriorityColor(int priority) {
+    switch (priority){
+      case 1:
+        return Colors.red;
+        break;
+
+      case 2:
+        return Colors.blue;
+        break;
+
+      default:
+        return Colors.blue;
+    }
+  }
+
+  Icon getPriorityIcon(int priority) {
+    switch (priority) {
+      case 1:
+        return Icon(Icons.push_pin_sharp);
+        break;
+
+      case 2:
+        return Icon(Icons.arrow_forward);
+        break;
+
+      default:
+        return Icon(Icons.arrow_forward);
+
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _delete(BuildContext context, Note note) async {
+
+    int result = await databaseHelper.deleteNote(note.id!);
+    if (result != 0) {
+      _showSnackBar(context, 'Nota apagada');
+      updateListView();
+    }
+  }
+
+  void navigateToDetail(Note note, String title) async {
+    bool result = await Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return NoteDetail(note, title);
     }));
+
+    if (result == true) {
+      updateListView();
+    }
+  }
+
+  void updateListView() {
+    final Future<Database> dbFuture = databaseHelper.initializeDatabase();
+    dbFuture.then((database) {
+      Future<List<Note>> noteListFuture = databaseHelper.getNoteList();
+      noteListFuture.then((noteList) {
+        setState(() {
+          this.noteList = noteList;
+          this.count = noteList.length;
+        });
+      });
+    });
   }
 }
