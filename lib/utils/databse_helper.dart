@@ -49,11 +49,12 @@ class DatabaseHelper {
   }
 
   // Fetch
-  getNoteMapList() async {
+  Future<List<Map<String, dynamic>>>getNoteMapList() async {
     Database db = await database;
     
     //var result = await db.rawQuery('Select * From $noteTable order by $colPriority ASC');
     var result = await db.query(noteTable, orderBy: '$colPriority ASC');
+    return result;
   }
 
   //Insert
