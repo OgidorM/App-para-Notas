@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import 'note_detail.dart';
 import '../models/note.dart';
 import '../utils/databse_helper.dart';
+import 'note_full.dart';
 
 
 class NoteList extends StatefulWidget {
@@ -85,7 +86,7 @@ class NoteListState extends State<NoteList> {
 
             onTap: () {
               debugPrint('ListTile Tapped');
-              navigateToDetail(noteList[position], 'Editar Nota');
+              navigateToDetailEdit(noteList[position], 'Editar Nota');
             },
           ),
         );
@@ -138,6 +139,16 @@ class NoteListState extends State<NoteList> {
     int result = await databaseHelper.deleteNote(note.id!);
     if (result != 0) {
       _showSnackBar(context, 'Nota apagada');
+      updateListView();
+    }
+  }
+
+  void navigateToDetailEdit(Note note, String title) async {
+    bool result = await Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return NoteFullScreen(note, title);
+    }));
+
+    if (result == true) {
       updateListView();
     }
   }
